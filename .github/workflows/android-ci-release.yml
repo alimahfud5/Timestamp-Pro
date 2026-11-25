@@ -1,4 +1,4 @@
-name: Android CI & GitHub Release
+name: Android CI & Build APK
 
 on:
   push:
@@ -12,13 +12,24 @@ on:
       - main
       - master
   workflow_dispatch:
+    inputs:
+      publish_release:
+        description: 'Terbitkan GitHub Release beserta file APK'
+        required: false
+        default: false
+        type: boolean
+      release_tag:
+        description: 'Tag rilis (contoh: v1.0.0) jika menerbitkan GitHub Release'
+        required: false
+        default: 'v1.0.0'
+        type: string
 
 permissions:
   contents: write
 
 jobs:
-  build-and-deploy:
-    name: Build, Test & Release APK
+  build-apk:
+    name: Test, Build & Package APK
     runs-on: ubuntu-latest
 
     steps:
@@ -34,26 +45,39 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Accept Android SDK Licenses
+        run: |
+          if [ -n "${ANDROID_HOME:-}" ] && [ -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
+          fi
+
       - name: Set up Gradle 9.3.1
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.3.1'
 
-      - name: Prepare Keystore & Environment
+      - name: Prepare Debug Keystore & Env
         run: |
           if [ -f debug.keystore.base64 ] && [ ! -f debug.keystore ]; then
-            base64 -d debug.keystore.base64 > debug.keystore
+            tr -d '\n\r ' < debug.keystore.base64 | base64 -d > debug.keystore
           fi
           if [ ! -f .env ] && [ -f .env.example ]; then
             cp .env.example .env
           fi
 
       - name: Run Unit Tests
-        run: gradle :app:testDebugUnitTest
+        run: gradle :app:testDebugUnitTest --no-daemon
+
+      - name: Upload Unit Test Report (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-report
+          path: app/build/reports/tests/testDebugUnitTest/
 
       - name: Build Debug APK
         run: |
-          gradle :app:assembleDebug
+          gradle :app:assembleDebug --no-daemon
           mkdir -p dist
           cp app/build/outputs/apk/debug/app-debug.apk dist/TIMESTAMP_PHOTO_PRO-debug.apk
 
@@ -72,7 +96,7 @@ jobs:
         run: |
           if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$STORE_PASSWORD" ] && [ -n "$KEY_PASSWORD" ]; then
             printf '%s' "$ANDROID_KEYSTORE_BASE64" | tr -d '\n\r ' | base64 -d > my-upload-key.jks
-            KEYSTORE_PATH="${{ github.workspace }}/my-upload-key.jks" gradle :app:assembleRelease :app:bundleRelease
+            KEYSTORE_PATH="${{ github.workspace }}/my-upload-key.jks" gradle :app:assembleRelease :app:bundleRelease --no-daemon
             cp app/build/outputs/apk/release/app-release.apk dist/TIMESTAMP_PHOTO_PRO-release.apk
             cp app/build/outputs/bundle/release/app-release.aab dist/TIMESTAMP_PHOTO_PRO-release.aab
             echo "built=true" >> "$GITHUB_OUTPUT"
@@ -81,9 +105,9 @@ jobs:
             echo "built=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Clean Up Release Keystore
+      - name: Clean Up Keystores
         if: always()
-        run: rm -f my-upload-key.jks
+        run: rm -f my-upload-key.jks debug.keystore
 
       - name: Upload Signed Release Artifacts
         if: steps.signed_release.outputs.built == 'true'
@@ -94,9 +118,22 @@ jobs:
             dist/TIMESTAMP_PHOTO_PRO-release.apk
             dist/TIMESTAMP_PHOTO_PRO-release.aab
 
+      - name: Write Build Summary
+        run: |
+          {
+            echo "## Build TIMESTAMP PHOTO PRO Selesai"
+            echo ""
+            echo "| File Output | Ukuran |"
+            echo "| :--- | :--- |"
+            for f in dist/*; do
+              [ -f "$f" ] && echo "| \`$(basename "$f")\` | $(du -h "$f" | cut -f1) |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish_release == true)
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || inputs.release_tag }}
           files: dist/*
           generate_release_notes: true

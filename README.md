@@ -11,21 +11,9 @@ Aplikasi Android native berbasis Kotlin & Jetpack Compose untuk menambahkan stem
 - **Kamera & GPS Otomatis**: Integrasi langsung dengan kamera HP (`Masuk Camera`) serta deteksi GPS otomatis + isi cepat alamat.
 - **Ekspor Resolusi Penuh & Riwayat**: Simpan ke `Pictures/TimestampPhotoPro` dengan metadata EXIF dan kelola riwayat melalui ikon Riwayat / Pengaturan.
 
-## Cara Build Lokal
+## Cara Build & Deploy APK di GitHub
 
-Persyaratan: **JDK 21**, **Android SDK (API 36)**, dan **Gradle 9.3.1**.
-
-```bash
-# Jalankan unit test
-gradle :app:testDebugUnitTest
-
-# Bangun Debug APK
-gradle :app:assembleDebug
-```
-
-## Deploy & Rilis Otomatis di GitHub
-
-Repositori ini sudah dilengkapi workflow GitHub Actions di `.github/workflows/android-ci-release.yml`.
+Repositori ini sudah siap build otomatis di GitHub melalui `.github/workflows/android-ci-release.yml` (JDK 21, Android SDK, Gradle 9.3.1).
 
 ### 1. Push Proyek ke GitHub
 
@@ -38,23 +26,38 @@ git remote add origin https://github.com/<username>/<nama-repo>.git
 git push -u origin main
 ```
 
-Setiap push ke branch `main` atau `master` akan otomatis menjalankan unit test dan menghasilkan artifact `TIMESTAMP_PHOTO_PRO-debug-apk` di tab **Actions**.
+### 2. Download APK dari GitHub Actions (Tanpa Pengaturan Tambahan)
 
-### 2. Rilis APK Otomatis via Tag (`GitHub Releases`)
+1. Buka repositori Anda di GitHub lalu pilih tab **Actions**.
+2. Setiap *push* ke branch `main`/`master` otomatis menjalankan workflow **Android CI & Build APK**.
+3. Anda juga dapat klik **Run workflow** kapan saja dari tab **Actions** (centang *Terbitkan GitHub Release beserta file APK* jika ingin langsung membuat halaman **Releases**).
+4. Setelah selesai, unduh file **`TIMESTAMP_PHOTO_PRO-debug-apk`** di bagian **Artifacts** (siap langsung di-install di HP Android).
+
+### 3. Rilis Otomatis via Tag Versi (`GitHub Releases`)
 
 ```bash
 git tag v1.0.0
 git push origin v1.0.0
 ```
 
-Push tag berawalan `v*` akan otomatis membuat halaman **GitHub Release** dan melampirkan file APK (dan AAB jika signing release dikonfigurasi).
+### 4. Opsional: Signed Release APK & Play Store AAB
 
-### 3. Opsional: Signed Release APK & AAB
+Untuk menghasilkan `TIMESTAMP_PHOTO_PRO-release.apk` dan `.aab` bertanda tangan produksi:
 
-Untuk menghasilkan APK/AAB bertanda tangan produksi (`release`) di GitHub Actions, tambahkan **Repository Secrets** berikut pada menu **Settings → Secrets and variables → Actions**:
+1. Buat keystore upload (alias `upload`) dengan menjalankan `bash scripts/create-release-keystore.sh`.
+2. Masukkan 3 **Repository Secrets** di GitHub (**Settings → Secrets and variables → Actions**):
 
 | Secret Name | Keterangan |
 | :--- | :--- |
-| `ANDROID_KEYSTORE_BASE64` | Isi file keystore `.jks` (`keyAlias`: `upload`) dalam format Base64 (`base64 -w 0 my-upload-key.jks`) |
+| `ANDROID_KEYSTORE_BASE64` | Output Base64 dari file `my-upload-key.jks` |
 | `STORE_PASSWORD` | Password keystore |
 | `KEY_PASSWORD` | Password key alias `upload` |
+
+## Build Lokal
+
+Persyaratan: **JDK 21**, **Android SDK (API 36)**, dan **Gradle 9.3.1**.
+
+```bash
+gradle :app:testDebugUnitTest
+gradle :app:assembleDebug
+```
