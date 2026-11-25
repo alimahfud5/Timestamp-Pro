@@ -74,11 +74,11 @@ fun TemplatesScreen(
 ) {
     val templates = listOf(
         TemplateItem(
-            title = "Timemark Verified (100% Akurat)",
-            description = "Persis seperti contoh gambar: jam besar | tanggal & hari + alamat putih polos di kiri bawah, watermark 'Timemark / Foto 100% akurat' di kanan atas, dan stempel vertikal Timemark Verified di tepi kanan.",
+            title = "Timemark Bersih (Jam Besar | Tanggal)",
+            description = "Jam besar bergaya Oswald dengan garis vertikal emas, tanggal & hari bertumpuk di sebelahnya, serta alamat putih polos di kiri bawah tanpa watermark.",
             icon = Icons.Default.Verified,
             config = StampConfig.PRESET_TIMEMARK_AKURAT,
-            badgeLabel = "TIMEMARK VERIFIED"
+            badgeLabel = "BERSIH TANPA WATERMARK"
         ),
         TemplateItem(
             title = "Patroli Polsek Semarang Selatan",

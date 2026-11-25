@@ -1,6 +1,8 @@
 package com.example.ui.components
 
 import android.graphics.Bitmap
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -15,14 +17,19 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -32,8 +39,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -55,10 +64,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.CropAspectRatio
 import com.example.data.model.NormalizedCropRect
 import com.example.ui.theme.CyanAccent
@@ -235,80 +243,87 @@ fun CropImageDialog(
     val croppedWidth = ((cropRect.width * sourceBitmap.width).roundToInt()).coerceAtLeast(1)
     val croppedHeight = ((cropRect.height * sourceBitmap.height).roundToInt()).coerceAtLeast(1)
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+    BackHandler(onBack = onDismiss)
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = Navy900
     ) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = Navy900
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .systemBarsPadding()
-                    .padding(12.dp)
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.size(48.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onDismiss) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Tutup",
-                                tint = SlateTextPrimary
-                            )
-                        }
-                        Column {
-                            Text(
-                                text = "EDIT & CROP GAMBAR",
-                                style = MaterialTheme.typography.titleSmall.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = SlateTextPrimary
-                                )
-                            )
-                            Text(
-                                text = "${croppedWidth} × ${croppedHeight} px • ${selectedRatio.displayName}",
-                                style = MaterialTheme.typography.labelSmall.copy(color = CyanBright)
-                            )
-                        }
-                    }
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        IconButton(
-                            onClick = {
-                                selectedRatio = CropAspectRatio.ORIGINAL
-                                cropRect = NormalizedCropRect(0f, 0f, 1f, 1f)
-                            }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.RestartAlt,
-                                contentDescription = "Reset Crop",
-                                tint = SlateTextSecondary
-                            )
-                        }
-
-                        Button(
-                            onClick = { onApplyCrop(selectedRatio, cropRect) },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = CyanAccent,
-                                contentColor = Navy900
-                            ),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.testTag("btn_apply_crop")
-                        ) {
-                            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Terapkan", fontWeight = FontWeight.Bold)
-                        }
-                    }
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Tutup",
+                        tint = SlateTextPrimary
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "EDIT & CROP GAMBAR",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = SlateTextPrimary
+                        )
+                    )
+                    Text(
+                        text = "${croppedWidth} × ${croppedHeight} px • ${selectedRatio.displayName}",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.labelSmall.copy(color = CyanBright)
+                    )
+                }
+
+                IconButton(
+                    onClick = {
+                        selectedRatio = CropAspectRatio.ORIGINAL
+                        cropRect = NormalizedCropRect(0f, 0f, 1f, 1f)
+                    },
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.RestartAlt,
+                        contentDescription = "Reset Crop",
+                        tint = SlateTextSecondary
+                    )
+                }
+
+                FilledIconButton(
+                    onClick = { onApplyCrop(selectedRatio, cropRect) },
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = CyanAccent,
+                        contentColor = Navy900
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .size(48.dp)
+                        .testTag("btn_apply_crop")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Terapkan Crop",
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
 
                 // Interactive Image & Crop Frame Canvas
                 BoxWithConstraints(
@@ -447,44 +462,58 @@ fun CropImageDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-                // Aspect Ratio FlowRow Selector (all 11 ratios visible at once)
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+            // Scrollable Aspect Ratio Selector Tray (all 11 ratios visible & scrollable above system nav bar)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = Navy800.copy(alpha = 0.55f),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, Navy700)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 156.dp)
+                        .verticalScroll(rememberScrollState())
+                        .padding(10.dp)
                 ) {
-                    CropAspectRatio.values().forEach { ratio ->
-                        val isSelected = selectedRatio == ratio
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (isSelected) CyanAccent else Navy800)
-                                .border(
-                                    1.dp,
-                                    if (isSelected) CyanBright else Navy600,
-                                    RoundedCornerShape(8.dp)
-                                )
-                                .clickable {
-                                    selectedRatio = ratio
-                                    cropRect = CropUtils.computeCenteredCropRect(
-                                        imageWidth = sourceBitmap.width,
-                                        imageHeight = sourceBitmap.height,
-                                        aspectRatio = ratio
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        CropAspectRatio.values().forEach { ratio ->
+                            val isSelected = selectedRatio == ratio
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) CyanAccent else Navy800)
+                                    .border(
+                                        1.dp,
+                                        if (isSelected) CyanBright else Navy600,
+                                        RoundedCornerShape(8.dp)
                                     )
-                                }
-                                .padding(horizontal = 10.dp, vertical = 8.dp)
-                                .testTag("dialog_crop_ratio_${ratio.name}"),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = ratio.displayName,
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isSelected) Navy900 else SlateTextPrimary
+                                    .clickable {
+                                        selectedRatio = ratio
+                                        cropRect = CropUtils.computeCenteredCropRect(
+                                            imageWidth = sourceBitmap.width,
+                                            imageHeight = sourceBitmap.height,
+                                            aspectRatio = ratio
+                                        )
+                                    }
+                                    .padding(horizontal = 10.dp, vertical = 8.dp)
+                                    .testTag("dialog_crop_ratio_${ratio.name}"),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = ratio.displayName,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isSelected) Navy900 else SlateTextPrimary
+                                    )
                                 )
-                            )
+                            }
                         }
                     }
                 }

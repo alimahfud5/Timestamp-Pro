@@ -460,42 +460,5 @@ fun StyleSection(
                 modifier = Modifier.testTag("switch_line_icons")
             )
         }
-
-        // 9. Timemark Verified Watermark Switch
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(Navy800)
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                Text(
-                    text = "Watermark Timemark (100% Akurat)",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        color = SlateTextPrimary
-                    )
-                )
-                Text(
-                    text = "Menampilkan label kanan atas & stempel vertikal Verified",
-                    style = MaterialTheme.typography.bodySmall.copy(color = SlateTextSecondary)
-                )
-            }
-
-            Switch(
-                checked = config.showTimemarkWatermark,
-                onCheckedChange = { onConfigChange(config.copy(showTimemarkWatermark = it)) },
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = CyanAccent,
-                    checkedTrackColor = Navy600,
-                    uncheckedThumbColor = SlateTextSecondary,
-                    uncheckedTrackColor = Navy900
-                ),
-                modifier = Modifier.testTag("switch_timemark_watermark")
-            )
-        }
     }
 }

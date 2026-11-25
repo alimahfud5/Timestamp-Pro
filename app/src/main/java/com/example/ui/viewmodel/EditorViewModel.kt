@@ -48,6 +48,36 @@ class EditorViewModel : ViewModel() {
     val uiState: StateFlow<EditorUiState> = _uiState.asStateFlow()
 
     private val undoStack = mutableListOf<StampConfig>()
+    private var loadedLogoUri: String? = null
+
+    fun syncLogoBitmap(context: Context) {
+        val targetUri = _uiState.value.config.logoUri
+        if (targetUri == null) {
+            loadedLogoUri = null
+            if (_uiState.value.logoBitmap != null) {
+                _uiState.update { it.copy(logoBitmap = null) }
+            }
+            return
+        }
+        val existing = _uiState.value.logoBitmap
+        if (loadedLogoUri == targetUri && existing != null && !existing.isRecycled) {
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            val bmp = BitmapUtils.loadLogoBitmap(context, targetUri)
+            loadedLogoUri = if (bmp != null) targetUri else null
+            _uiState.update { it.copy(logoBitmap = bmp) }
+        }
+    }
+
+    fun restoreDefaultLogo(context: Context) {
+        val current = _uiState.value.config
+        val updated = current.copy(logoUri = StampConfig.DEFAULT_LOGO_URI)
+        updateConfig(updated)
+        loadedLogoUri = null
+        syncLogoBitmap(context)
+        _uiState.update { it.copy(statusMessage = "Logo default dikembalikan.") }
+    }
 
     fun onPhotoSelected(context: Context, uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -165,9 +195,12 @@ class EditorViewModel : ViewModel() {
             source = if (exifTime != null) TimestampSource.ORIGINAL_EXIF else TimestampSource.CURRENT
         )
         updateConfig(defaultConfig)
-        _uiState.update { it.copy(logoBitmap = null) }
-        if (context != null && LocationHelper.hasLocationPermission(context)) {
-            fetchCurrentGps(context, silent = true)
+        loadedLogoUri = null
+        if (context != null) {
+            syncLogoBitmap(context)
+            if (LocationHelper.hasLocationPermission(context)) {
+                fetchCurrentGps(context, silent = true)
+            }
         }
     }
 
@@ -192,9 +225,11 @@ class EditorViewModel : ViewModel() {
             val saved = BitmapUtils.saveLogoToInternalStorage(context, uri, maxDimension = 1024)
             if (saved != null) {
                 val (internalUri, bmp) = saved
-                val updatedConfig = _uiState.value.config.copy(logoUri = internalUri.toString())
+                val uriStr = internalUri.toString()
+                val updatedConfig = _uiState.value.config.copy(logoUri = uriStr)
                 undoStack.add(_uiState.value.config)
                 if (undoStack.size > 20) undoStack.removeAt(0)
+                loadedLogoUri = uriStr
                 _uiState.update {
                     it.copy(
                         logoBitmap = bmp,
@@ -213,6 +248,7 @@ class EditorViewModel : ViewModel() {
 
     fun removeLogo() {
         val updatedConfig = _uiState.value.config.copy(logoUri = null)
+        loadedLogoUri = null
         updateConfig(updatedConfig)
         _uiState.update { it.copy(logoBitmap = null, statusMessage = "Logo dihapus.") }
     }

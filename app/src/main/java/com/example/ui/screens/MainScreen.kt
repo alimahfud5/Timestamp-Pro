@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.local.SavedPhotoRepository
+import com.example.ui.components.CropImageDialog
 import com.example.ui.theme.CyanAccent
 import com.example.ui.theme.CyanBright
 import com.example.ui.theme.Navy700
@@ -60,16 +61,37 @@ fun MainScreen(
     val context = LocalContext.current
     var currentDestination by remember { mutableStateOf(MainDestination.EDITOR) }
     var showHistoryScreen by rememberSaveable { mutableStateOf(false) }
+    var showCropScreen by rememberSaveable { mutableStateOf(false) }
     var savedQuality by rememberSaveable { mutableIntStateOf(95) }
     var preserveExif by rememberSaveable { mutableStateOf(true) }
     val savedPhotos by historyViewModel.savedPhotos.collectAsStateWithLifecycle()
+    val editorUiState by editorViewModel.uiState.collectAsStateWithLifecycle()
 
     // Handle system back navigation cleanly
-    BackHandler(enabled = showHistoryScreen || currentDestination != MainDestination.EDITOR) {
-        if (showHistoryScreen) {
-            showHistoryScreen = false
+    BackHandler(enabled = showCropScreen || showHistoryScreen || currentDestination != MainDestination.EDITOR) {
+        when {
+            showCropScreen -> showCropScreen = false
+            showHistoryScreen -> showHistoryScreen = false
+            else -> currentDestination = MainDestination.EDITOR
+        }
+    }
+
+    if (showCropScreen) {
+        val sourceBmp = editorUiState.sourcePreviewBitmap
+        if (sourceBmp != null) {
+            CropImageDialog(
+                sourceBitmap = sourceBmp,
+                initialAspectRatio = editorUiState.cropAspectRatio,
+                initialCropRect = editorUiState.cropRect,
+                onDismiss = { showCropScreen = false },
+                onApplyCrop = { ratio, rect ->
+                    editorViewModel.applyCrop(ratio, rect)
+                    showCropScreen = false
+                }
+            )
+            return
         } else {
-            currentDestination = MainDestination.EDITOR
+            showCropScreen = false
         }
     }
 
@@ -146,7 +168,8 @@ fun MainScreen(
                         savedQuality = savedQuality,
                         preserveExif = preserveExif,
                         savedPhotoCount = savedPhotos.size,
-                        onOpenHistoryClick = { showHistoryScreen = true }
+                        onOpenHistoryClick = { showHistoryScreen = true },
+                        onOpenCropClick = { showCropScreen = true }
                     )
                 }
                 MainDestination.TEMPLATES -> {

@@ -85,7 +85,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import com.example.data.local.SavedPhotoRepository
 import com.example.data.model.CropAspectRatio
-import com.example.ui.components.CropImageDialog
 import com.example.ui.components.CropSection
 import com.example.ui.components.LocationSection
 import com.example.ui.components.LogoSection
@@ -115,6 +114,7 @@ fun EditorScreen(
     preserveExif: Boolean = true,
     savedPhotoCount: Int = 0,
     onOpenHistoryClick: () -> Unit = {},
+    onOpenCropClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -122,7 +122,6 @@ fun EditorScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     var selectedTab by remember { mutableIntStateOf(0) }
-    var showCropDialog by remember { mutableStateOf(false) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -180,6 +179,10 @@ fun EditorScreen(
                 )
             )
         }
+    }
+
+    LaunchedEffect(uiState.config.logoUri) {
+        viewModel.syncLogoBitmap(context)
     }
 
     LaunchedEffect(uiState.statusMessage) {
@@ -319,7 +322,7 @@ fun EditorScreen(
                         onOpenCameraClick = launchCamera,
                         onCropPhotoClick = {
                             if (uiState.sourcePreviewBitmap != null) {
-                                showCropDialog = true
+                                onOpenCropClick()
                             }
                         }
                     )
@@ -453,12 +456,12 @@ fun EditorScreen(
                             onSelectAspectRatio = { ratio ->
                                 viewModel.applyCropAspectRatio(ratio)
                                 if (ratio == CropAspectRatio.FREE && uiState.sourcePreviewBitmap != null) {
-                                    showCropDialog = true
+                                    onOpenCropClick()
                                 }
                             },
                             onOpenInteractiveCrop = {
                                 if (uiState.sourcePreviewBitmap != null) {
-                                    showCropDialog = true
+                                    onOpenCropClick()
                                 }
                             },
                             onResetCrop = { viewModel.resetCrop() }
@@ -472,26 +475,11 @@ fun EditorScreen(
                                 )
                             },
                             onRemoveLogoClick = { viewModel.removeLogo() },
+                            onRestoreDefaultLogoClick = { viewModel.restoreDefaultLogo(context) },
                             onConfigChange = { viewModel.updateConfig(it) }
                         )
                     }
                 }
-            }
-        }
-
-        // Interactive Crop Image Dialog
-        if (showCropDialog) {
-            uiState.sourcePreviewBitmap?.let { sourceBmp ->
-                CropImageDialog(
-                    sourceBitmap = sourceBmp,
-                    initialAspectRatio = uiState.cropAspectRatio,
-                    initialCropRect = uiState.cropRect,
-                    onDismiss = { showCropDialog = false },
-                    onApplyCrop = { ratio, rect ->
-                        viewModel.applyCrop(ratio, rect)
-                        showCropDialog = false
-                    }
-                )
             }
         }
 

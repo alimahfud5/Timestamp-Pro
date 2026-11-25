@@ -21,7 +21,6 @@ import com.example.data.model.StampTextAlign
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlin.math.abs
 import kotlin.math.max
 
 object StampRenderer {
@@ -155,7 +154,6 @@ object StampRenderer {
         val margin = (config.marginDp * scale).coerceAtLeast(16f * scale)
 
         // Draw custom user logo if loaded (default: Kanan Atas)
-        var topRightReservedY = 0f
         if (logoBitmap != null && !logoBitmap.isRecycled && logoBitmap.width > 0 && logoBitmap.height > 0) {
             val bounds = computeLogoRect(
                 targetWidth = targetWidth,
@@ -170,21 +168,6 @@ object StampRenderer {
             val logoPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
             val srcRect = Rect(0, 0, logoBitmap.width, logoBitmap.height)
             canvas.drawBitmap(logoBitmap, srcRect, logoRect, logoPaint)
-            if (config.logoPosition == LogoPosition.TOP_RIGHT) {
-                topRightReservedY = bounds.bottom + 10f * scale
-            }
-        }
-
-        // Draw Timemark Verified ("Timemark / Foto 100% akurat" + right-edge vertical verified) if enabled
-        if (config.showTimemarkWatermark) {
-            drawTimemarkWatermarks(
-                canvas = canvas,
-                targetWidth = targetWidth,
-                targetHeight = targetHeight,
-                config = config,
-                context = context,
-                topRightReservedY = topRightReservedY
-            )
         }
 
         val lines = prepareLines(config)
@@ -687,18 +670,6 @@ object StampRenderer {
         return LogoBounds(left, top, left + finalW, top + drawH)
     }
 
-    fun generateVerificationCode(timeMillis: Long): String {
-        val alphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
-        var seed = abs(timeMillis xor 0x5A3C9E1B7D4L)
-        val sb = StringBuilder(14)
-        for (i in 0 until 14) {
-            seed = seed * 6364136223846793005L + 1442695040888963407L
-            val idx = ((seed ushr 32) and 0x7FFFFFFFL) % alphabet.length
-            sb.append(alphabet[idx.toInt()])
-        }
-        return sb.toString()
-    }
-
     private fun wrapTextByWidth(text: String, paint: Paint, maxWidth: Float): List<String> {
         if (paint.measureText(text) <= maxWidth) return listOf(text)
         val words = text.split(" ")
@@ -715,96 +686,5 @@ object StampRenderer {
         }
         if (current.isNotEmpty()) result.add(current.toString())
         return if (result.isEmpty()) listOf(text) else result
-    }
-
-    private fun drawTimemarkWatermarks(
-        canvas: Canvas,
-        targetWidth: Int,
-        targetHeight: Int,
-        config: StampConfig,
-        context: Context?,
-        topRightReservedY: Float
-    ) {
-        val scale = targetWidth / 1000f
-        val margin = (config.marginDp * scale).coerceAtLeast(18f * scale)
-        val bodyTypeface = getRobotoCondensedTypeface(context)
-
-        // 1. Top-Right "Timemark" (gold "Time" + white "mark") & "Foto 100% akurat"
-        val brandSize = 31f * scale
-        val subSize = 18f * scale
-
-        val goldPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-            textSize = brandSize
-            color = Color.rgb(245, 184, 46)
-            setShadowLayer(4f * scale, 1.5f * scale, 1.5f * scale, Color.argb(190, 0, 0, 0))
-        }
-        val markPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-            textSize = brandSize
-            color = Color.WHITE
-            setShadowLayer(4f * scale, 1.5f * scale, 1.5f * scale, Color.argb(190, 0, 0, 0))
-        }
-        val subPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            typeface = bodyTypeface
-            textSize = subSize
-            color = Color.argb(240, 255, 255, 255)
-            setShadowLayer(4f * scale, 1.5f * scale, 1.5f * scale, Color.argb(190, 0, 0, 0))
-        }
-
-        val timeWidth = goldPaint.measureText("Time")
-        val markWidth = markPaint.measureText("mark")
-        val totalBrandW = timeWidth + markWidth
-        val rightEdgeX = targetWidth - margin
-        val topStartY = if (topRightReservedY > margin) topRightReservedY else margin
-
-        val brandFm = goldPaint.fontMetrics
-        val brandBaseline = topStartY - brandFm.ascent
-        canvas.drawText("Time", rightEdgeX - totalBrandW, brandBaseline, goldPaint)
-        canvas.drawText("mark", rightEdgeX - markWidth, brandBaseline, markPaint)
-
-        val subText = "Foto 100% akurat"
-        val subW = subPaint.measureText(subText)
-        val subFm = subPaint.fontMetrics
-        val subBaseline = brandBaseline + brandFm.descent + 4f * scale - subFm.ascent
-        canvas.drawText(subText, rightEdgeX - subW, subBaseline, subPaint)
-
-        // 2. Right-middle vertical edge watermark: [shield-check] CODE  Timemark Verified
-        val verSize = 15.5f * scale
-        val verPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            typeface = bodyTypeface
-            textSize = verSize
-            color = Color.argb(225, 255, 255, 255)
-            setShadowLayer(3f * scale, 1f * scale, 1f * scale, Color.argb(180, 0, 0, 0))
-        }
-        val code = generateVerificationCode(config.getResolvedTimestamp())
-        val verLabel = "$code  Timemark Verified"
-        val shieldSize = 16f * scale
-        val shieldGap = 7f * scale
-        val totalStripW = shieldSize + shieldGap + verPaint.measureText(verLabel)
-
-        val anchorX = targetWidth - 16f * scale
-        val anchorY = targetHeight * 0.5f
-
-        canvas.save()
-        canvas.translate(anchorX, anchorY)
-        canvas.rotate(-90f)
-        val stripStartX = -totalStripW / 2f
-        val shieldCx = stripStartX + shieldSize / 2f
-        val shieldCy = -verSize * 0.34f
-        drawShield(canvas, shieldCx, shieldCy, shieldSize, Paint(verPaint), scale)
-        // Small check mark inside shield
-        val checkPaint = Paint(verPaint).apply {
-            style = Paint.Style.STROKE
-            strokeWidth = 1.8f * scale
-        }
-        val checkPath = Path().apply {
-            moveTo(shieldCx - shieldSize * 0.2f, shieldCy)
-            lineTo(shieldCx - shieldSize * 0.04f, shieldCy + shieldSize * 0.16f)
-            lineTo(shieldCx + shieldSize * 0.24f, shieldCy - shieldSize * 0.16f)
-        }
-        canvas.drawPath(checkPath, checkPaint)
-        canvas.drawText(verLabel, stripStartX + shieldSize + shieldGap, 0f, verPaint)
-        canvas.restore()
     }
 }

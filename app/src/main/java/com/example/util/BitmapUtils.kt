@@ -5,6 +5,8 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.Uri
+import com.example.R
+import com.example.data.model.StampConfig
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -105,6 +107,28 @@ object BitmapUtils {
                 fos.flush()
             }
             Uri.fromFile(logoFile) to finalBitmap
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    fun loadLogoBitmap(context: Context, logoUri: String?): Bitmap? {
+        if (logoUri.isNullOrBlank()) return null
+        return try {
+            if (logoUri == StampConfig.DEFAULT_LOGO_URI) {
+                val opts = BitmapFactory.Options().apply {
+                    inPreferredConfig = Bitmap.Config.ARGB_8888
+                    inScaled = false
+                }
+                BitmapFactory.decodeResource(context.resources, R.drawable.img_default_logo, opts)
+            } else {
+                loadOrientedBitmap(
+                    context = context,
+                    uri = Uri.parse(logoUri),
+                    maxDimension = 1024
+                )
+            }
         } catch (e: Exception) {
             e.printStackTrace()
             null

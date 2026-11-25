@@ -67,6 +67,7 @@ fun LogoSection(
     logoBitmap: Bitmap?,
     onPickLogoClick: () -> Unit,
     onRemoveLogoClick: () -> Unit,
+    onRestoreDefaultLogoClick: () -> Unit = {},
     onConfigChange: (StampConfig) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -123,18 +124,22 @@ fun LogoSection(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Logo / Watermark Kustom",
+                            text = "Logo Foto",
                             style = MaterialTheme.typography.titleSmall.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = SlateTextPrimary
                             )
                         )
                         Spacer(modifier = Modifier.height(2.dp))
+                        val isDefaultLogo = config.logoUri == StampConfig.DEFAULT_LOGO_URI
                         Text(
-                            text = if (logoBitmap != null) {
-                                "Logo aktif • Posisi: ${config.logoPosition.displayName} (${(config.logoSizePercent * 100).roundToInt()}%)"
-                            } else {
-                                "Tambahkan logo instansi, perusahaan, atau watermark PNG transparan ke foto"
+                            text = when {
+                                logoBitmap != null && isDefaultLogo ->
+                                    "Logo default aktif (transparan) • Posisi: ${config.logoPosition.displayName} (${(config.logoSizePercent * 100).roundToInt()}%)"
+                                logoBitmap != null ->
+                                    "Logo kustom aktif • Posisi: ${config.logoPosition.displayName} (${(config.logoSizePercent * 100).roundToInt()}%)"
+                                else ->
+                                    "Tidak ada logo aktif. Gunakan logo default atau pilih PNG transparan dari galeri."
                             },
                             style = MaterialTheme.typography.bodySmall.copy(color = SlateTextSecondary)
                         )
@@ -188,6 +193,23 @@ fun LogoSection(
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
+                    }
+                }
+
+                if (config.logoUri != StampConfig.DEFAULT_LOGO_URI) {
+                    OutlinedButton(
+                        onClick = onRestoreDefaultLogoClick,
+                        border = BorderStroke(1.dp, CyanAccent.copy(alpha = 0.7f)),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("btn_restore_default_logo")
+                    ) {
+                        Text(
+                            text = "Pakai Logo Default",
+                            color = CyanBright,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
                 }
             }

@@ -55,14 +55,8 @@ object PhotoSaver {
                 fullBitmap.recycle()
             }
 
-            // 3. Load optional custom logo and render stamp on cropped full-resolution bitmap
-            val logoBitmap = config.logoUri?.let { uriStr ->
-                BitmapUtils.loadOrientedBitmap(
-                    context = context,
-                    uri = Uri.parse(uriStr),
-                    maxDimension = 1024
-                )
-            }
+            // 3. Load default or custom logo and render stamp on cropped full-resolution bitmap
+            val logoBitmap = BitmapUtils.loadLogoBitmap(context, config.logoUri)
             val stampedBitmap = StampRenderer.renderStampOnBitmap(croppedBitmap, config, context, logoBitmap)
             if (logoBitmap != null && !logoBitmap.isRecycled) {
                 logoBitmap.recycle()

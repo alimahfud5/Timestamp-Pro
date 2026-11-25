@@ -14,7 +14,6 @@ data class StampConfig(
     val backgroundOpacity: Float = 0.80f,
     val hasShadow: Boolean = true,
     val showLineIcons: Boolean = false,
-    val showTimemarkWatermark: Boolean = false,
     
     // Metadata fields (lokasi & GPS default mengikuti deteksi GPS saat ini)
     val includeLocation: Boolean = true,
@@ -34,8 +33,8 @@ data class StampConfig(
     val badgeType: BadgeType = BadgeType.NONE,
     val marginDp: Int = 16,
 
-    // Custom logo watermark settings (default kanan atas)
-    val logoUri: String? = null,
+    // Custom / default logo settings (default kanan atas)
+    val logoUri: String? = DEFAULT_LOGO_URI,
     val logoPosition: LogoPosition = LogoPosition.TOP_RIGHT,
     val logoSizePercent: Float = 0.14f
 ) {
@@ -48,6 +47,7 @@ data class StampConfig(
     }
 
     companion object {
+        const val DEFAULT_LOGO_URI = "default_logo"
         val DEFAULT = StampConfig()
 
         val PRESET_SEMARANG_SELATAN = StampConfig(
@@ -168,7 +168,6 @@ data class StampConfig(
             backgroundOpacity = 0.80f,
             hasShadow = true,
             showLineIcons = false,
-            showTimemarkWatermark = true,
             includeLocation = true,
             includeGps = false,
             includeActivity = false,

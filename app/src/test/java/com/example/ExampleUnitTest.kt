@@ -146,9 +146,9 @@ class ExampleUnitTest {
         assertEquals(com.example.data.model.StampFontSize.NORMAL.sizeSp, StampConfig.DEFAULT.fontSizeSp, 0.01f)
         assertEquals(com.example.data.model.BadgeType.NONE, StampConfig.DEFAULT.badgeType)
         assertEquals(false, StampConfig.DEFAULT.showLineIcons)
+        assertEquals(StampConfig.DEFAULT_LOGO_URI, StampConfig.DEFAULT.logoUri)
         assertEquals(com.example.data.model.LogoPosition.TOP_RIGHT, StampConfig.DEFAULT.logoPosition)
         assertNotNull(StampConfig.PRESET_TIMEMARK_AKURAT)
-        assertEquals(true, StampConfig.PRESET_TIMEMARK_AKURAT.showTimemarkWatermark)
         assertEquals(false, StampConfig.PRESET_TIMEMARK_AKURAT.showLineIcons)
         assertEquals(StampPosition.BOTTOM_LEFT, StampConfig.PRESET_TIMEMARK_AKURAT.position)
         assertEquals(com.example.data.model.StampTextAlign.LEFT, StampConfig.PRESET_TIMEMARK_AKURAT.textAlign)
@@ -249,7 +249,7 @@ class ExampleUnitTest {
     }
 
     @Test
-    fun testLogoRectAndVerificationCode() {
+    fun testLogoRectPlacement() {
         // Default TOP_RIGHT placement on 1000x800 canvas with 200x100 logo at 20% width and 20px margin
         val rect = StampRenderer.computeLogoRect(
             targetWidth = 1000,
@@ -264,12 +264,5 @@ class ExampleUnitTest {
         assertEquals(20f, rect.top, 0.5f)
         assertEquals(980f, rect.right, 0.5f)
         assertEquals(120f, rect.bottom, 0.5f)
-
-        // Verification code is deterministic and 14 uppercase alphanumeric characters
-        val code1 = StampRenderer.generateVerificationCode(1795357464000L)
-        val code2 = StampRenderer.generateVerificationCode(1795357464000L)
-        assertEquals(14, code1.length)
-        assertEquals(code1, code2)
-        assertTrue(code1.all { it in '2'..'9' || it in 'A'..'Z' })
     }
 }
