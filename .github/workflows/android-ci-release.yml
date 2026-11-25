@@ -1,0 +1,97 @@
+name: Android CI & GitHub Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    name: Build, Test & Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle 9.3.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+
+      - name: Prepare Keystore & Environment
+        run: |
+          if [ -f debug.keystore.base64 ] && [ ! -f debug.keystore ]; then
+            base64 -d debug.keystore.base64 > debug.keystore
+          fi
+          if [ ! -f .env ] && [ -f .env.example ]; then
+            cp .env.example .env
+          fi
+
+      - name: Run Unit Tests
+        run: gradle :app:testDebugUnitTest
+
+      - name: Build Debug APK
+        run: |
+          gradle :app:assembleDebug
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk dist/TIMESTAMP_PHOTO_PRO-debug.apk
+
+      - name: Upload Debug APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TIMESTAMP_PHOTO_PRO-debug-apk
+          path: dist/TIMESTAMP_PHOTO_PRO-debug.apk
+
+      - name: Build Signed Release APK & AAB (if signing secrets are configured)
+        id: signed_release
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.STORE_PASSWORD != '' && secrets.KEY_PASSWORD != '' }}
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > my-upload-key.jks
+          KEYSTORE_PATH="${{ github.workspace }}/my-upload-key.jks" gradle :app:assembleRelease :app:bundleRelease
+          cp app/build/outputs/apk/release/app-release.apk dist/TIMESTAMP_PHOTO_PRO-release.apk
+          cp app/build/outputs/bundle/release/app-release.aab dist/TIMESTAMP_PHOTO_PRO-release.aab
+
+      - name: Clean Up Release Keystore
+        if: always()
+        run: rm -f my-upload-key.jks
+
+      - name: Upload Signed Release Artifacts
+        if: ${{ steps.signed_release.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: TIMESTAMP_PHOTO_PRO-release-artifacts
+          path: |
+            dist/TIMESTAMP_PHOTO_PRO-release.apk
+            dist/TIMESTAMP_PHOTO_PRO-release.aab
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

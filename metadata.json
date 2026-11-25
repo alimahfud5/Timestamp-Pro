@@ -1,0 +1,6 @@
+{
+  "name": "TIMESTAMP PHOTO PRO",
+  "description": "Aplikasi penambah stempel tanggal, waktu, GPS, dan catatan pada foto galeri secara profesional.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
