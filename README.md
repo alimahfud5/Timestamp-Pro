@@ -13,7 +13,7 @@ Aplikasi Android native berbasis Kotlin & Jetpack Compose untuk menambahkan stem
 
 ## Cara Build & Deploy APK di GitHub
 
-Repositori ini sudah siap build otomatis di GitHub melalui `.github/workflows/android-ci-release.yml` (JDK 21, Android SDK, Gradle 9.3.1).
+Repositori ini sudah siap build otomatis di GitHub melalui `.github/workflows/build-apk.yml` (JDK 21, Android SDK, Gradle 9.3.1).
 
 ### 1. Push Proyek ke GitHub
 
